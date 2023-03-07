@@ -96,6 +96,7 @@ export class ShadowDrawer extends Component {
         });
     }
 
+    // TODO: this method needs refactoring
     _drawShadow() {
         const shadowRads = this.shadowAngle * (Math.PI / 180);
 
@@ -110,8 +111,8 @@ export class ShadowDrawer extends Component {
 
             const strokePoints: Array<any> = [];
             const fillRects = render.points.map((point, i, array) => {
-                strokePoints.push({ position: point.clone(), isBase: true, isExternal: true });
-                strokePoints.push({ position: point.clone().add(shift), isBase: false, isExternal: true, link: strokePoints[i * 2] });
+                strokePoints.push({ position: point.clone(), isBase: true, isExternal: true, isDrawn: false });
+                strokePoints.push({ position: point.clone().add(shift), isBase: false, isExternal: true, isDrawn: false, link: strokePoints[i * 2] });
                 strokePoints[i * 2].link = strokePoints[i * 2 + 1];
 
                 const nextPoint = array[(i + 1) % array.length];
@@ -144,44 +145,57 @@ export class ShadowDrawer extends Component {
                 this._fillGraphics.fill();
             });
 
-            // basePoints.forEach(point => {
-            //     if (Intersection2D.pointInPolygon(point.position, extraPoints.map(p => p.position))) {
-            //         point.isExternal = false;
-            //     } 
-            // });
-            // extraPoints.forEach(point => {
-            //     if (Intersection2D.pointInPolygon(point.position, basePoints.map(p => p.position))) {
-            //         point.isExternal = false;
-            //     } 
-            // });
+            if (basePoints.filter(point => point.isExternal).length === extraPoints.filter(point => point.isExternal).length) {
+                const limit = strokePoints.filter(p => p.isExternal).length;
+                let currentPoint = basePoints.find(p => p.isExternal);
 
-            const limit = strokePoints.filter(p => p.isExternal).length;
-            let currentPoint = basePoints.find(p => p.isExternal);
+                this._strokeGraphics.moveTo(currentPoint.position.x, currentPoint.position.y);
+                currentPoint.isDrawn = true;
 
-            this._strokeGraphics.moveTo(currentPoint.position.x, currentPoint.position.y);
+                const startPosition = currentPoint.position;
+                let ticker = 1;
 
-            const startPosition = currentPoint.position;
-            let ticker = 1;
+                while(ticker < limit) {
+                    const isBase = currentPoint.isBase;
+                    const index = isBase ? basePoints.indexOf(currentPoint) : extraPoints.indexOf(currentPoint);
+                    const length = isBase ? basePoints.length : extraPoints.length;
+                    const nextPoint = isBase ? basePoints[(index + 1) % length] : extraPoints[(index + 1) % length];
 
-            while(ticker < limit) {
-                const isBase = currentPoint.isBase;
-                const index = isBase ? basePoints.indexOf(currentPoint) : extraPoints.indexOf(currentPoint);
-                const length = isBase ? basePoints.length : extraPoints.length;
-                const nextPoint = isBase ? basePoints[(index + 1) % length] : extraPoints[(index + 1) % length];
+                    if (nextPoint.isExternal && !nextPoint.isDrawn) {
+                        currentPoint = nextPoint;
+                    } else {
+                        currentPoint = currentPoint.link;
+                    }
 
-                if (nextPoint.isExternal) {
-                    currentPoint = nextPoint;
-                } else {
-                    currentPoint = currentPoint.link;
+                    this._strokeGraphics.lineTo(currentPoint.position.x, currentPoint.position.y);
+                    currentPoint.isDrawn = true;
+
+                    ticker++;
                 }
+                
+                this._strokeGraphics.lineTo(startPosition.x, startPosition.y);
+                this._strokeGraphics.stroke();
+            } else {
+                basePoints.forEach((point, i) => {
+                    const func = i === 0 ? 'moveTo' : 'lineTo';
+                    this._strokeGraphics[func](point.position.x, point.position.y);
+                });
+                this._strokeGraphics.lineTo(basePoints[0].position.x, basePoints[0].position.y);
+                this._strokeGraphics.stroke();
+                
+                extraPoints.forEach((point, i) => {
+                    const func = i === 0 ? 'moveTo' : 'lineTo';
+                    this._strokeGraphics[func](point.position.x, point.position.y);
+                });
+                this._strokeGraphics.lineTo(extraPoints[0].position.x, extraPoints[0].position.y);
+                this._strokeGraphics.stroke();
 
-                this._strokeGraphics.lineTo(currentPoint.position.x, currentPoint.position.y);
-
-                ticker++;
+                basePoints.forEach((point, i) => {
+                    this._strokeGraphics.moveTo(point.position.x, point.position.y);
+                    this._strokeGraphics.lineTo(point.link.position.x, point.link.position.y);
+                    this._strokeGraphics.stroke();
+                });
             }
-            
-            this._strokeGraphics.lineTo(startPosition.x, startPosition.y);
-            this._strokeGraphics.stroke();
         });
     }
 

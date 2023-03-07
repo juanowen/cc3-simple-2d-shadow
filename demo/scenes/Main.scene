@@ -812,7 +812,7 @@
       "b": 0,
       "a": 140
     },
-    "shadowAngle": 0,
+    "shadowAngle": -43,
     "shadowLength": 20,
     "shadowBlurWidth": 10,
     "fillEffect": {
@@ -1174,7 +1174,7 @@
       "b": 0,
       "a": 255
     },
-    "_string": "Move mouse to change light source position",
+    "_string": "Move mouse to change Sun position",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 25,
