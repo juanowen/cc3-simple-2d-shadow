@@ -104,99 +104,76 @@ export class ShadowDrawer extends Component {
         this._strokeGraphics.clear();
 
         this._shadowRenders.forEach((render: ShadowRender) => {
+            const shadowRenderPoints: Vec2[] = [];
+            let pointsCenter = v2(0, 0);
+            let shiftedPointsCenter = v2(0, 0);
+
+            // calculate shadow shift vector
             const shift = v2(
                 Math.cos(shadowRads) * this.shadowLength * render.scale,
                 Math.sin(shadowRads) * this.shadowLength / 2 * render.scale
             );
 
-            const strokePoints: Array<any> = [];
-            const fillRects = render.points.map((point, i, array) => {
-                strokePoints.push({ position: point.clone(), isBase: true, isExternal: true, isDrawn: false });
-                strokePoints.push({ position: point.clone().add(shift), isBase: false, isExternal: true, isDrawn: false, link: strokePoints[i * 2] });
-                strokePoints[i * 2].link = strokePoints[i * 2 + 1];
+            // calculate shadow offset points
+            const shiftedPoints: Vec2[] = render.points.map((point: Vec2) => point.clone().add(shift));
 
-                const nextPoint = array[(i + 1) % array.length];
-                return [
-                    point.clone(),
-                    nextPoint.clone(),
-                    nextPoint.clone().add(shift),
-                    point.clone().add(shift)
-                ]
+            // remove points that fall into the shadow zone
+            // and calculate the points to draw the shadow
+            render.points.forEach((point: Vec2, i: number) => {
+                this._checkPointInShadow(render.points, i, shiftedPoints, shadowRenderPoints);
+                pointsCenter = pointsCenter.add(point);
+            });
+            shiftedPoints.forEach((point: Vec2, i: number) => {
+                this._checkPointInShadow(shiftedPoints, i, render.points, shadowRenderPoints);
+                shiftedPointsCenter = shiftedPointsCenter.add(point);
             });
 
-            const basePoints = strokePoints.filter(p => p.isBase);
-            const extraPoints = strokePoints.filter(p => !p.isBase);
+            // calculate the center of the shadow base and the center of the shadow offset points
+            pointsCenter = pointsCenter.multiplyScalar(1 / render.points.length);
+            shiftedPointsCenter = shiftedPointsCenter.multiplyScalar(1 / shiftedPoints.length);
 
-            fillRects.push(basePoints.map(point => point.position));
-            fillRects.push(extraPoints.map(point => point.position));
+            // calculate the center of all shadow rendering points
+            const shadowCenter = pointsCenter.lerp(shiftedPointsCenter, 0.5);
 
-            fillRects.forEach(rect => {
-                const targetStrokePoints = strokePoints.filter(point => rect.find(p => p.equals(point.position)) === undefined);
-                targetStrokePoints.forEach(point => {
-                    if (Intersection2D.pointInPolygon(point.position, rect)) {
-                        point.isExternal = false;
-                    }
-                });
+            // sort the shadow rendering points counterclockwise
+            shadowRenderPoints.sort((pointA, pointB) => {
+                const dirA: Vec2 = Vec2.subtract(v2(), pointA, shadowCenter);
+                const dirB: Vec2 = Vec2.subtract(v2(), pointB, shadowCenter);
 
-                rect.forEach((point, i) => {
-                    const func = i === 0 ? 'moveTo' : 'lineTo';
-                    this._fillGraphics[func](point.x, point.y);
-                });
-                this._fillGraphics.fill();
+                const angleA: number = Math.atan2(dirA.y, dirA.x);
+                const angleB: number = Math.atan2(dirB.y, dirB.x);
+
+                return angleA - angleB;
             });
 
-            if (basePoints.filter(point => point.isExternal).length === extraPoints.filter(point => point.isExternal).length) {
-                const limit = strokePoints.filter(p => p.isExternal).length;
-                let currentPoint = basePoints.find(p => p.isExternal);
+            // draw shadow graphics
+            this._fillGraphics.moveTo(shadowRenderPoints[0].x, shadowRenderPoints[0].y);
+            this._strokeGraphics.moveTo(shadowRenderPoints[0].x, shadowRenderPoints[0].y);
 
-                this._strokeGraphics.moveTo(currentPoint.position.x, currentPoint.position.y);
-                currentPoint.isDrawn = true;
-
-                const startPosition = currentPoint.position;
-                let ticker = 1;
-
-                while(ticker < limit) {
-                    const isBase = currentPoint.isBase;
-                    const index = isBase ? basePoints.indexOf(currentPoint) : extraPoints.indexOf(currentPoint);
-                    const length = isBase ? basePoints.length : extraPoints.length;
-                    const nextPoint = isBase ? basePoints[(index + 1) % length] : extraPoints[(index + 1) % length];
-
-                    if (nextPoint.isExternal && !nextPoint.isDrawn) {
-                        currentPoint = nextPoint;
-                    } else {
-                        currentPoint = currentPoint.link;
-                    }
-
-                    this._strokeGraphics.lineTo(currentPoint.position.x, currentPoint.position.y);
-                    currentPoint.isDrawn = true;
-
-                    ticker++;
-                }
-                
-                this._strokeGraphics.lineTo(startPosition.x, startPosition.y);
-                this._strokeGraphics.stroke();
-            } else {
-                basePoints.forEach((point, i) => {
-                    const func = i === 0 ? 'moveTo' : 'lineTo';
-                    this._strokeGraphics[func](point.position.x, point.position.y);
-                });
-                this._strokeGraphics.lineTo(basePoints[0].position.x, basePoints[0].position.y);
-                this._strokeGraphics.stroke();
-                
-                extraPoints.forEach((point, i) => {
-                    const func = i === 0 ? 'moveTo' : 'lineTo';
-                    this._strokeGraphics[func](point.position.x, point.position.y);
-                });
-                this._strokeGraphics.lineTo(extraPoints[0].position.x, extraPoints[0].position.y);
-                this._strokeGraphics.stroke();
-
-                basePoints.forEach((point, i) => {
-                    this._strokeGraphics.moveTo(point.position.x, point.position.y);
-                    this._strokeGraphics.lineTo(point.link.position.x, point.link.position.y);
-                    this._strokeGraphics.stroke();
-                });
+            for (let i = 1; i < shadowRenderPoints.length; i++) {
+                this._fillGraphics.lineTo(shadowRenderPoints[i].x, shadowRenderPoints[i].y);
+                this._strokeGraphics.lineTo(shadowRenderPoints[i].x, shadowRenderPoints[i].y);
             }
+
+            this._fillGraphics.fill();
+
+            this._strokeGraphics.lineTo(shadowRenderPoints[0].x, shadowRenderPoints[0].y);
+            this._strokeGraphics.stroke();
         });
+    }
+
+    _checkPointInShadow(points: Vec2[], pointIndex: number, linkedPoints: Vec2[], resultArray: Vec2[]) {
+        const point: Vec2 = points[pointIndex];
+        const linkedPoint: Vec2 = linkedPoints[pointIndex];
+        const testPolygon: Vec2[] = points.reduce((res: Vec2[], p: Vec2) => {
+                res.push(p.equals(point) ? linkedPoint : p);
+                return res;
+            },
+            []
+        );
+        if (!Intersection2D.pointInPolygon(point, testPolygon)) {
+            resultArray.push(point);
+        }
     }
 
     _setShadowMaterial(renderer: Sprite | Graphics, effectAsset: EffectAsset) {
