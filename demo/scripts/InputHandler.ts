@@ -1,6 +1,6 @@
 import { _decorator, Component, Node, input, Input, EventMouse, v2, UITransform } from 'cc';
 const { ccclass, property } = _decorator;
-import { shadowDrawerEventTarget, ShadowDrawerEvent } from './ShadowDrawer';
+import { ShadowDrawer } from './ShadowDrawer';
 
 @ccclass('InputHandler')
 export class InputHandler extends Component {
@@ -27,7 +27,7 @@ export class InputHandler extends Component {
             this._shadowLength = newLength;
             this._shadowAngle = newAngle;
             
-            shadowDrawerEventTarget.emit(ShadowDrawerEvent.REDRAW_SHADOW, this._shadowAngle, this._shadowLength);
+            ShadowDrawer.eventTarget.emit(ShadowDrawer.EventType.REDRAW_SHADOW, this._shadowAngle, this._shadowLength);
         }
     }
 }

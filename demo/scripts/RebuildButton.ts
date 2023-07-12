@@ -1,6 +1,6 @@
 import { _decorator, Component, Node } from 'cc';
 const { ccclass, property } = _decorator;
-import { houseFactoryEventTarget, HouseFactoryEvent } from './HouseFactory';
+import { HouseFactory } from './HouseFactory';
 
 @ccclass('RebuildButton')
 export class RebuildButton extends Component {
@@ -9,7 +9,7 @@ export class RebuildButton extends Component {
     }
 
     onTouchStart() {
-        houseFactoryEventTarget.emit(HouseFactoryEvent.REBUILD_HOUSES);  
+        HouseFactory.eventTarget.emit(HouseFactory.EventType.REBUILD_HOUSES);  
     }
 }
 

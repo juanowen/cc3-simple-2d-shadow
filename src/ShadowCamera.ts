@@ -2,13 +2,16 @@ import { _decorator, Node, Camera, UITransform, Rect, EventTarget, view, size } 
 const { ccclass, property } = _decorator;
 
 
-export const shadowCameraEventTarget: EventTarget = new EventTarget();
-export const ShadowCameraEvent = {
-    STICK_NODE_TO_CAMERA: 'stickNodeToCamera'
+const shadowCameraEventTarget: EventTarget = new EventTarget();
+enum ShadowCameraEvent {
+    STICK_NODE_TO_CAMERA
 }
 
 @ccclass('ShadowCamera')
 export class ShadowCamera extends Camera {
+	static eventTarget: EventTarget = shadowCameraEventTarget;
+	static EventType: typeof ShadowCameraEvent = ShadowCameraEvent;
+
 	private _transform: UITransform = null;
 
     onLoad() {

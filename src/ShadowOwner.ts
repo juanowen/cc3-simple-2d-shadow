@@ -1,6 +1,6 @@
 import { _decorator, Component, Node, PolygonCollider2D, Vec2, v2 } from 'cc';
 const { ccclass, property, requireComponent } = _decorator;
-import { shadowDrawerEventTarget, ShadowDrawerEvent } from './ShadowDrawer';
+import { ShadowDrawer } from './ShadowDrawer';
 
 @ccclass('ShadowOwner')
 @requireComponent(PolygonCollider2D)
@@ -24,7 +24,7 @@ export class ShadowOwner extends Component {
                 return worldPos.clone().add(sPoint).add(sOffset);
             });
 
-            shadowDrawerEventTarget.emit(ShadowDrawerEvent.REGISTER_SHADOW_OBJECT, this, points);
+            ShadowDrawer.eventTarget.emit(ShadowDrawer.EventType.REGISTER_SHADOW_OBJECT, this, points);
         }
     }
 }

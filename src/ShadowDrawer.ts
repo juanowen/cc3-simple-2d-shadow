@@ -1,14 +1,14 @@
 import { _decorator, Component, Node, EventTarget, Vec2, Graphics, Material, v2, Color, Intersection2D, EffectAsset, graphicsAssembler, Layers, Sprite, RenderTexture, SpriteFrame } from 'cc';
 const { ccclass, property } = _decorator;
 import { ShadowOwner } from './ShadowOwner';
-import { shadowCameraEventTarget, ShadowCameraEvent } from './ShadowCamera';
+import { ShadowCamera } from './ShadowCamera';
 
 
-export const shadowDrawerEventTarget: EventTarget = new EventTarget();
-export const ShadowDrawerEvent = {
-    REGISTER_SHADOW_OBJECT: 'registerShadowObject',
-    REDRAW_SHADOW: 'redrawShadow',
-    CLEAR_SHADOW_OBJECTS: 'clearShadowObjects'
+const shadowDrawerEventTarget: EventTarget = new EventTarget();
+enum ShadowDrawerEvent {
+    REGISTER_SHADOW_OBJECT,
+    REDRAW_SHADOW,
+    CLEAR_SHADOW_OBJECTS
 }
 
 @ccclass('ShadowRender')
@@ -29,6 +29,9 @@ class ShadowRender {
 
 @ccclass('ShadowDrawer')
 export class ShadowDrawer extends Component {
+    static eventTarget: EventTarget = shadowDrawerEventTarget;
+    static EventType: typeof ShadowDrawerEvent = ShadowDrawerEvent;
+
     @property
     public shadowColor: Color = new Color(0, 0, 0);
     @property
@@ -87,7 +90,7 @@ export class ShadowDrawer extends Component {
         
         const sprite = renderNode.addComponent(Sprite);
 
-        shadowCameraEventTarget.emit(ShadowCameraEvent.STICK_NODE_TO_CAMERA, renderNode, (texture: RenderTexture) => {
+        ShadowCamera.eventTarget.emit(ShadowCamera.EventType.STICK_NODE_TO_CAMERA, renderNode, (texture: RenderTexture) => {
             const spriteFrame = new SpriteFrame();
             spriteFrame.texture = texture;
             sprite.spriteFrame = spriteFrame;

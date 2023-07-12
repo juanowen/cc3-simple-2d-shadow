@@ -1,14 +1,17 @@
 import { _decorator, Component, EventTarget, Prefab, instantiate } from 'cc';
 const { ccclass, property } = _decorator;
-import { shadowDrawerEventTarget, ShadowDrawerEvent } from './ShadowDrawer';
+import { ShadowDrawer } from './ShadowDrawer';
 
 export const houseFactoryEventTarget: EventTarget = new EventTarget();
-export const HouseFactoryEvent = {
-    REBUILD_HOUSES: 'generateHouses'
+enum HouseFactoryEvent {
+    REBUILD_HOUSES
 };
 
 @ccclass('HouseFactory')
 export class HouseFactory extends Component {
+    static eventTarget: EventTarget = houseFactoryEventTarget;
+    static EventType: typeof HouseFactoryEvent = HouseFactoryEvent;
+
     @property({ type: [Prefab] })
     public prefabs: Prefab[] = [];
     @property
@@ -56,11 +59,11 @@ export class HouseFactory extends Component {
             house.node.setParent(this.node);
         });
 
-        shadowDrawerEventTarget.emit(ShadowDrawerEvent.REDRAW_SHADOW);
+        ShadowDrawer.eventTarget.emit(ShadowDrawer.EventType.REDRAW_SHADOW);
     }
 
     onRebuildHouses() {
-        shadowDrawerEventTarget.emit(ShadowDrawerEvent.CLEAR_SHADOW_OBJECTS);
+        ShadowDrawer.eventTarget.emit(ShadowDrawer.EventType.CLEAR_SHADOW_OBJECTS);
         this._generateHouses();
     }
 }
